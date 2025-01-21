@@ -110,7 +110,7 @@ class Board:
             while True:
                 curr_row += i[0]
                 curr_column += i[1]
-                if not (0 < curr_row < 10 and 0 < curr_column < 10): break
+                if not (0 < curr_row < self.height + 1 and 0 < curr_column < self.width + 1): break
                 if self.board[curr_row - 1][curr_column - 1] != self.board[row - 1][column - 1]: break
                 i[2].append((curr_row, curr_column))
         for i in (diagonal_1, diagonal_2, vertical, horizontal):
@@ -162,8 +162,8 @@ class Board:
         cells = []
         curr_level = self.path_board[row - 1][column - 1]
         if row != 1 and self.path_board[row - 2][column - 1] == 0: cells.append((row - 1, column))
-        if row != 9 and self.path_board[row][column - 1] == 0: cells.append((row + 1, column))
-        if column != 9 and self.path_board[row - 1][column] == 0: cells.append((row, column + 1))
+        if row != self.height and self.path_board[row][column - 1] == 0: cells.append((row + 1, column))
+        if column != self.width and self.path_board[row - 1][column] == 0: cells.append((row, column + 1))
         if column != 1 and self.path_board[row - 1][column - 2] == 0: cells.append((row, column - 1))
         for i in cells:
             self.path_board[i[0] - 1][i[1] - 1] = curr_level + 1
@@ -176,8 +176,8 @@ class Board:
         curr_level = self.path_board[row - 1][column - 1]
         for i in range(curr_level, 1, -1):
             if curr_row != 1 and self.path_board[curr_row - 2][curr_column - 1] == i - 1: cells.append((curr_row - 1, curr_column))
-            elif curr_row != 9 and self.path_board[curr_row][curr_column - 1] == i - 1: cells.append((curr_row + 1, curr_column))
-            elif curr_column != 9 and self.path_board[curr_row - 1][curr_column] == i - 1: cells.append((curr_row, curr_column + 1))
+            elif curr_row != self.height and self.path_board[curr_row][curr_column - 1] == i - 1: cells.append((curr_row + 1, curr_column))
+            elif curr_column != self.width and self.path_board[curr_row - 1][curr_column] == i - 1: cells.append((curr_row, curr_column + 1))
             elif curr_column != 1 and self.path_board[curr_row - 1][curr_column - 2] == i - 1: cells.append((curr_row, curr_column - 1))
             curr_row, curr_column = cells[-1]
         cells.pop(-1)
@@ -215,8 +215,8 @@ class Board:
     def on_click(self):
         # отрисовка выбранной клетки и закрашивание предыдущей
         self.prev_clickedFlag = self.clickedFlag
-        if 1 <= self.prev_column <= 9 and 1 <= self.prev_row <= 9: self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
-        if 1 <= self.curr_column <= 9 and 1 <= self.curr_row <= 9:
+        if 1 <= self.prev_column <= self.width and 1 <= self.prev_row <= self.height: self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
+        if 1 <= self.curr_column <= self.width and 1 <= self.curr_row <= self.height:
             if [self.prev_row, self.prev_column] == [self.curr_row, self.curr_column]:
                 if self.clickedFlag:
                     self.clickedFlag = False
@@ -238,8 +238,8 @@ class Board:
         else:
             self.clickedFlag = False
         self.update_board(self.screen)
-        if 1 <= self.curr_column <= 9 and 1 <= self.curr_row <= 9:
-            if 1 <= self.prev_column <= 9 and 1 <= self.prev_row <= 9:
+        if 1 <= self.curr_column <= self.width and 1 <= self.curr_row <= self.height:
+            if 1 <= self.prev_column <= self.width and 1 <= self.prev_row <= self.height:
                 if (self.board[self.prev_row - 1][self.prev_column - 1] > 0
                         and self.board[self.curr_row - 1][self.curr_column - 1] <= 0
                         and self.clickedFlag
