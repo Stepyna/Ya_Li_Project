@@ -2,6 +2,8 @@ import pygame
 import random
 import copy
 
+from pygame.draw_py import draw_polygon
+
 
 class Board:
 
@@ -26,7 +28,10 @@ class Board:
                 self.board_of_available_cells.append([row, column, k])
             column = 0
         # значения по умолчанию
-        self.left = 175
+        if self.width == 9:
+            self.left = 175
+        elif self.width == 5:
+            self.left = 275
         self.top = 100
         self.cell_size = 50
         self.cell_color = (245, 245, 245)
@@ -84,6 +89,7 @@ class Board:
     # начало хода
     def gamemove(self, screen):
         self.clickedFlag = False
+        self.action_allowed = True
         self.prev_clickedFlag = False
         self.prev_column = 0
         self.prev_row = 0
@@ -149,11 +155,11 @@ class Board:
             pass
         for i in [4, 5, 6]:
             pygame.draw.circle(screen, self.color_dict[self.generated_balls[i - 4]],
-                               (self.left + i * self.cell_size - self.cell_size // 2,
+                               (175 + i * self.cell_size - self.cell_size // 2,
                                 self.cell_size // 2), self.ball_radius, 20)
 
             pygame.draw.circle(screen, (0, 0, 0),
-                               (self.left + i * self.cell_size - self.cell_size // 2,
+                               (175 + i * self.cell_size - self.cell_size // 2,
                                 self.cell_size // 2), self.ball_radius,
                                2)
 
@@ -252,6 +258,7 @@ class Board:
                         list_1 = copy.deepcopy(list_2)
                         list_2 = []
                     if self.path_board[self.curr_row - 1][self.curr_column - 1] > 0:
+                        self.action_allowed = False
                         cells = self.path_find(self.curr_row, self.curr_column)
                         prev_row, prev_column = self.prev_row, self.prev_column
                         for i in cells[::-1]:
@@ -264,9 +271,9 @@ class Board:
                             prev_row, prev_column = i[0], i[1] # добавить анимацию
                             self.update_board(self.screen)
                             pygame.display.flip()
-                            pygame.time.delay(300)
                         self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
                         self.check_ball(self.curr_row, self.curr_column)
+                        self.action_allowed = True
                         if self.board[self.curr_row - 1][self.curr_column - 1] > 0: self.gamemove(screen)
 
     # получение клетки по клику мышки
@@ -278,6 +285,7 @@ class Board:
 
     # отрисовка поля
     def render(self, screen, Font):
+        screen.fill((100, 100, 100))
         count_column = 0
         count_row = 0
         pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(
@@ -312,18 +320,18 @@ class Board:
             count_column = 0
         for i in [3, 4, 5]:
             pygame.draw.polygon(screen, self.cell_color, [
-                (self.left + i * self.cell_size, 0),
-                (self.left + i * self.cell_size, self.cell_size),
-                (self.left + (i + 1) * self.cell_size, self.cell_size),
-                (self.left + (i + 1) * self.cell_size, 0)])
+                (175 + i * self.cell_size, 0),
+                (175 + i * self.cell_size, self.cell_size),
+                (175 + (i + 1) * self.cell_size, self.cell_size),
+                (175 + (i + 1) * self.cell_size, 0)])
 
             pygame.draw.rect(screen, self.frame_color,
-                             pygame.Rect(self.left + i * self.cell_size + 2,
+                             pygame.Rect(175 + i * self.cell_size + 2,
                                          0,
                                          self.cell_size - 3,
                                          self.cell_size - 3), self.frame_size)
 
-            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left + i * self.cell_size,
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(175 + i * self.cell_size,
                                                             0,
                                                             self.cell_size + 1,
                                                             self.cell_size + 1), self.frame_size)
@@ -331,6 +339,136 @@ class Board:
     def end_of_game(self):
         global running
         running = False
+
+
+class Menu:
+
+    def __init__(self, screen, Font, flag):
+        self.flag = flag
+        self.action_allowed = True
+        self.middle = 25
+        self.button_width = 150
+        self.button_height = 50
+        self.left = 325
+        self.screen = screen
+        self.font = Font
+        self.button_color = (245, 245, 245)
+        self.frame_color = (255, 255, 255)
+        self.frame_size = 2
+        self.clicked_cell_color = (200, 200, 200)
+        self.curr_button_val = -1
+        self.prev_button_val = -1
+        if flag == "Start":
+            self.buttons = [[5, 9, "Back"],
+                            ["Back"],
+                            ["Back"]]
+            self.result = "COLOR LINES"
+            self.first_buttons = ["New game", "Records", "Options", "Exit"]
+        else:
+            self.result = f'YOU LOST!  Your score is: {board.score}'
+            self.first_buttons = ["Main menu", "Exit"]
+        self.Board_size = 0
+
+    def get_click(self, mouse_pos):
+        if self.action_allowed:
+            self.get_button(mouse_pos)
+            self.on_click()
+
+    def get_button(self, mouse_pos):
+        if self.left <= mouse_pos[0] <= 800 - self.left:
+            self.curr_button_val = ((mouse_pos[1] - 125) // (self.button_height + self.middle)) + 1
+            if 125 + self.curr_button_val * self.button_height + (self.curr_button_val - 1) * self.middle >= mouse_pos[1]:
+                self.curr_button_val -= 1
+            else:
+                self.curr_button_val = -1
+
+    def on_click(self):
+        global menu_flag
+        global menu_flag_2
+        global run
+        global running
+        menu_flag, menu_flag_2, run, running = True, True, True, True
+        if self.flag == "Start":
+            if self.curr_button_val == -1:
+                a = "o"
+            elif self.prev_button_val == -1:
+                self.prev_button_val = self.curr_button_val
+                if self.curr_button_val == 0: self.render_new_menu("NEW GAME", ["5 x 5", "9 x 9", "Back"])
+                elif self.curr_button_val == 1: self.render_new_menu("RECORDS", ["Back"])
+                elif self.curr_button_val == 2: self.render_new_menu("OPTIONS", ["Back"])
+                else:
+                    run, running, menu_flag, menu_flag_2 = False, False, False, False
+            elif 0 <= self.curr_button_val <= len(self.buttons[self.prev_button_val]) - 1:
+                if self.buttons[self.prev_button_val][self.curr_button_val] == "Back":
+                    self.prev_button_val = -1
+                    self.curr_button_val = -1
+                    self.render_menu(self.screen)
+                elif self.curr_button_val != -1 and self.prev_button_val != -1:
+                    if self.prev_button_val == 0:
+                        menu_flag = False
+                        self.Board_size = self.buttons[self.prev_button_val][self.curr_button_val]
+                        pass
+                    else: pass
+        else:
+            if self.curr_button_val == -1: pass
+            elif self.curr_button_val == 1:
+                run, running, menu_flag, menu_flag_2 = False, False, False, False
+                pass
+            elif self.curr_button_val == 0:
+                menu_flag_2 = False
+                pass
+
+    def render_menu(self, screen):
+        screen.fill((100, 100, 100))
+        a = self.font.render(self.result, 1, (255, 255, 255))
+        text_rect = a.get_rect(center=(800 / 2, 50))
+        screen.blit(a, text_rect)
+        c = 1
+        for i in self.first_buttons:
+            c += 1
+            pygame.draw.polygon(screen, self.button_color, [
+                (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 50),
+                (self.left, (c - 1) * self.middle + c * self.button_height + 50),
+                (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 50),
+                (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 50)])
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
+                                                                    (c - 1) * self.middle + (c - 1) * self.button_height + 50,
+                                                                    self.button_width + 1,
+                                                                    self.button_height + 1), 1)
+            pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
+                                                            (c - 1) * self.middle + (c - 1) * self.button_height + 50 + 2,
+                                                            self.button_width - 2,
+                                                            self.button_height - 2), 1)
+            a = self.font.render(i, 1, (10, 10, 10))
+            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height)))
+            screen.blit(a, text_rect)
+
+    def render_new_menu(self, heading, list_1):
+        screen = self.screen
+        screen.fill((100, 100, 100))
+        a = self.font.render(heading, 1, (255, 255, 255))
+        text_rect = a.get_rect(center=(800 / 2, 50))
+        screen.blit(a, text_rect)
+        c = 1
+        for i in list_1:
+            c += 1
+            pygame.draw.polygon(screen, self.button_color, [
+                (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 50),
+                (self.left, (c - 1) * self.middle + c * self.button_height + 50),
+                (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 50),
+                (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 50)])
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
+                                                            (c - 1) * self.middle + (c - 1) * self.button_height + 50,
+                                                            self.button_width + 1,
+                                                            self.button_height + 1), 1)
+            pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
+                                                                   (c - 1) * self.middle + (
+                                                                               c - 1) * self.button_height + 50 + 2,
+                                                                   self.button_width - 2,
+                                                                   self.button_height - 2), 1)
+            a = self.font.render(i, 1, (10, 10, 10))
+            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height)))
+            screen.blit(a, text_rect)
 
 
 if __name__ == '__main__':
@@ -346,17 +484,48 @@ if __name__ == '__main__':
     run = True
     while run:
         screen.fill((100, 100, 100))
-        board = Board(9, 9, screen, Font)
+        menu = Menu(screen, Font, "Start")
+        menu.render_menu(screen)
+        menu_flag = True
+        running = True
+        menu_flag_2 = True
+        while menu_flag:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    run = False
+                    menu_flag = False
+                    menu_flag_2 = False
+                if event.type == pygame.MOUSEBUTTONDOWN and menu.action_allowed:
+                    menu.get_click(event.pos)
+            pygame.display.flip()
+
+        board = Board(menu.Board_size, menu.Board_size, screen, Font)
         board.render(screen, Font)
         board.gamemove(screen)
-        running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                     run = False
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                    menu_flag = False
+                    menu_flag_2 = False
+                if event.type == pygame.MOUSEBUTTONDOWN and board.action_allowed:
                     board.get_click(event.pos)
             pygame.display.flip()
+
+        menu = Menu(screen, Font, "End")
+        menu.render_menu(screen)
+        while menu_flag_2:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    run = False
+                    menu_flag = False
+                    menu_flag_2 = False
+                if event.type == pygame.MOUSEBUTTONDOWN and menu.action_allowed:
+                    menu.get_click(event.pos)
+            pygame.display.flip()
+
     # завершение работы
     pygame.quit()
