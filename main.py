@@ -1,6 +1,30 @@
 import pygame
 import random
 import copy
+from pygame.locals import *
+
+
+class Ball(pygame.sprite.Sprite):
+    def __init__(self, color, pos, target_pos, speed=5):
+        super().__init__()
+        self.image = pygame.Surface((40, 40))  # Размер шарика
+        self.image.fill(color)
+        pygame.draw.circle(self.image, color, (20, 20), 20)  # Рисуем круг
+        self.rect = self.image.get_rect(center=pos)
+        self.target_pos = target_pos
+        self.speed = speed
+
+    def update(self):
+        # Перемещаем шарик к целевой позиции
+        dx = self.target_pos[0] - self.rect.centerx
+        dy = self.target_pos[1] - self.rect.centery
+
+        distance = max(abs(dx), abs(dy))
+        if distance > 0:
+            step_x = int(self.speed * dx / distance)
+            step_y = int(self.speed * dy / distance)
+
+            self.rect.move_ip(step_x, step_y)
 
 
 class Board:
@@ -121,7 +145,7 @@ class Board:
                 self.board[row - 1][column - 1] = 0
                 self.fill_cell(row, column, self.cell_color)
                 self.score += (len(i) + 1) * (2 + len(i) - 5)
-        pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 50), (800, 20)])
+        pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 20)])
         a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
         screen.blit(a, (500, 20))
         self.update_second_board()
@@ -215,13 +239,15 @@ class Board:
     def on_click(self):
         # отрисовка выбранной клетки и закрашивание предыдущей
         self.prev_clickedFlag = self.clickedFlag
-        if 1 <= self.prev_column <= 9 and 1 <= self.prev_row <= 9: self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
+        if 1 <= self.prev_column <= 9 and 1 <= self.prev_row <= 9: self.fill_cell(self.prev_row, self.prev_column,
+                                                                                  self.cell_color)
         if 1 <= self.curr_column <= 9 and 1 <= self.curr_row <= 9:
             if [self.prev_row, self.prev_column] == [self.curr_row, self.curr_column]:
                 if self.clickedFlag:
                     self.clickedFlag = False
 
-                else: self.clickedFlag = True
+                else:
+                    self.clickedFlag = True
 
             else:
                 self.clickedFlag = True
@@ -231,8 +257,10 @@ class Board:
                     (self.left + (self.curr_column - 1) * self.cell_size + 4,
                      self.top + (self.curr_row - 1) * self.cell_size + 4),
                     (
-                    self.left + (self.curr_column - 1) * self.cell_size + 4, self.top + self.curr_row * self.cell_size - 4),
-                    (self.left + self.curr_column * self.cell_size - 4, self.top + self.curr_row * self.cell_size - 4),
+                        self.left + (self.curr_column - 1) * self.cell_size + 4,
+                        self.top + self.curr_row * self.cell_size - 4),
+                    (self.left + self.curr_column * self.cell_size - 4,
+                     self.top + self.curr_row * self.cell_size - 4),
                     (self.left + self.curr_column * self.cell_size - 4,
                      self.top + (self.curr_row - 1) * self.cell_size + 4)])
         else:
@@ -254,17 +282,58 @@ class Board:
                     if self.path_board[self.curr_row - 1][self.curr_column - 1] > 0:
                         cells = self.path_find(self.curr_row, self.curr_column)
                         prev_row, prev_column = self.prev_row, self.prev_column
+
+                        # Создание спрайтов для анимации
+                        moving_balls = pygame.sprite.Group()
                         for i in cells[::-1]:
-                            self.board[i[0] - 1][i[1] - 1] = copy.copy(self.board[prev_row - 1][prev_column - 1])
-                            self.board[prev_row - 1][prev_column - 1] = 0
-                            self.fill_cell(prev_row, prev_column, self.cell_color)
-                            if (prev_row, prev_column) == (self.prev_row, self.prev_column):
-                                self.fill_cell(prev_row, prev_column, self.clicked_cell_color)
-                                self.fill_cell(self.curr_row, self.curr_column, (0, 255, 0))
-                            prev_row, prev_column = i[0], i[1] # добавить анимацию
-                            self.update_board(self.screen)
+                            # Добавляем проверку, что текущая клетка заполнена
+                            if self.board[prev_row - 1][prev_column - 1] > 0:
+                                ball = Ball(self.color_dict[self.board[prev_row - 1][prev_column - 1]],
+                                            (self.left + (prev_column - 1) * self.cell_size + self.cell_size // 2,
+                                             self.top + (prev_row - 1) * self.cell_size + self.cell_size // 2),
+                                            (self.left + (i[1] - 1) * self.cell_size + self.cell_size // 2,
+                                             self.top + (i[0] - 1) * self.cell_size + self.cell_size // 2))
+                                moving_balls.add(ball)
+
+                            prev_row, prev_column = i[0], i[1]
+
+                        # Запуск анимации
+                        clock = pygame.time.Clock()
+                        done_moving = False
+                        while not done_moving:
+                            for event in pygame.event.get():
+                                if event.type == QUIT:
+                                    running = False
+                                    run = False
+
+                            moving_balls.update()
+                            done_moving = all(
+                                ball.rect.center == ball.target_pos for ball in moving_balls.sprites())
+
+                            screen.fill((100, 100, 100))
+                            board.render(screen, Font)
+                            moving_balls.draw(screen)
                             pygame.display.flip()
-                            pygame.time.delay(300)
+                            clock.tick(60)
+
+                        # Обработка после завершения анимации
+                        for ball in moving_balls.sprites():
+                            self.board[ball.target_pos[1] // self.cell_size - 1][
+                                ball.target_pos[0] // self.cell_size - 1] = \
+                                self.board[(ball.rect.y - self.top) // self.cell_size][
+                                    (ball.rect.x - self.left) // self.cell_size]
+                            self.board[(ball.rect.y - self.top) // self.cell_size][
+                                (ball.rect.x - self.left) // self.cell_size] = 0
+                            self.fill_cell((ball.rect.y - self.top) // self.cell_size + 1,
+                                           (ball.rect.x - self.left) // self.cell_size + 1, self.cell_color)
+                            self.fill_cell(ball.target_pos[1] // self.cell_size,
+                                           ball.target_pos[0] // self.cell_size,
+                                           (0, 255, 0))
+
+                        self.check_ball(self.curr_row, self.curr_column)
+                        if self.board[self.curr_row - 1][self.curr_column - 1] > 0:
+                            self.gamemove(screen)
+
                         self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
                         self.check_ball(self.curr_row, self.curr_column)
                         if self.board[self.curr_row - 1][self.curr_column - 1] > 0: self.gamemove(screen)
@@ -281,10 +350,10 @@ class Board:
         count_column = 0
         count_row = 0
         pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(
-             self.left - 1,
-             self.top - 1,
-             self.width * self.cell_size + 3,
-             self.width * self.cell_size + 3), 1)
+            self.left - 1,
+            self.top - 1,
+            self.width * self.cell_size + 3,
+            self.width * self.cell_size + 3), 1)
         a = Font.render("Next:", 1, (255, 255, 255))
         screen.blit(a, (250, 20))
         # отрисовка клеток
@@ -293,10 +362,10 @@ class Board:
             for k in range(self.width):
                 count_column += 1
                 pygame.draw.polygon(screen, self.cell_color, [
-                        (self.left + (count_column - 1) * self.cell_size, self.top + (count_row - 1) * self.cell_size),
-                        (self.left + (count_column - 1) * self.cell_size, self.top + count_row * self.cell_size),
-                        (self.left + count_column * self.cell_size, self.top + count_row * self.cell_size),
-                        (self.left + count_column * self.cell_size, self.top + (count_row - 1) * self.cell_size)])
+                    (self.left + (count_column - 1) * self.cell_size, self.top + (count_row - 1) * self.cell_size),
+                    (self.left + (count_column - 1) * self.cell_size, self.top + count_row * self.cell_size),
+                    (self.left + count_column * self.cell_size, self.top + count_row * self.cell_size),
+                    (self.left + count_column * self.cell_size, self.top + (count_row - 1) * self.cell_size)])
 
                 pygame.draw.rect(screen, self.frame_color,
                                  pygame.Rect(self.left + (count_column - 1) * self.cell_size + 2,
@@ -305,9 +374,9 @@ class Board:
                                              self.cell_size - 3), self.frame_size)
 
                 pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left + (count_column - 1) * self.cell_size,
-                                                                       self.top + (count_row - 1) * self.cell_size,
-                                                                       self.cell_size + 1,
-                                                                       self.cell_size + 1), self.frame_size)
+                                                                self.top + (count_row - 1) * self.cell_size,
+                                                                self.cell_size + 1,
+                                                                self.cell_size + 1), self.frame_size)
 
             count_column = 0
         for i in [3, 4, 5]:
@@ -331,7 +400,6 @@ class Board:
     def end_of_game(self):
         global running
         running = False
-
 
 if __name__ == '__main__':
     # инициализация Pygame:
@@ -357,6 +425,6 @@ if __name__ == '__main__':
                     run = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     board.get_click(event.pos)
-            pygame.display.flip()
-    # завершение работы
+                    board.update_board(screen)
+                    pygame.display.flip()
     pygame.quit()
