@@ -8,6 +8,7 @@ Font = pygame.font.Font(path, 30)
 size = width, height = 800, 600
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("Color Lines")
+color = pygame.Color('white')
 
 # Создаем объект Clock
 clock = pygame.time.Clock()
