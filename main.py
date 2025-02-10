@@ -129,7 +129,7 @@ class Board:
                                        2)
 
             count_column = 0
-    # обновляет остальные доски (доски пути и свободных клеток)
+    # обновляет остальные доски (доски пути и свободных клеток) 2
     def update_second_board(self):
         row, column = 0, 0
         self.board_of_available_cells.clear()
