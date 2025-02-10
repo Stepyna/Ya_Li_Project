@@ -625,6 +625,11 @@ if __name__ == '__main__':
                     menu_flag_2 = False
                 if event.type == pygame.MOUSEBUTTONDOWN and board.action_allowed:
                     board.get_click(event.pos)
+                if event.type == pygame.KEYDOWN:
+                    if pygame.key.get_pressed()[pygame.K_ESCAPE]:
+                        running = False
+                        menu_flag_2 = False
+                        break
             pygame.display.flip()
 
         menu = Menu(screen, Font, "End")
