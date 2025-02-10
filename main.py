@@ -64,7 +64,7 @@ class Board:
         self.Font = Font
         self.score = 0
         for _ in range(3):
-            self.generated_balls.append(random.choice([1, 2, 3, 4, 5, 6, 7]))
+            self.generated_balls.append(random.choice(list(self.color_dict)))
 
     # обновляет доску и рисует новые шары
     def update_board(self, screen):
