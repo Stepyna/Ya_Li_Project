@@ -48,6 +48,16 @@ class Board:
                            5:(220, 0, 220), # 5 - Фиолетовый
                            6:(0, 220, 220), # 6 - Голубой
                            7:(255, 165, 0)} # 7 - Оранжевый
+        self.dim = 5
+        if self.width == 5:
+            self.color_dict = {1:(220, 0, 0), # 1 - Красный
+                               2:(0, 0, 220), # 2 - Синий
+                               3:(0, 220, 0), # 3 - Зеленый
+                               4:(250, 250, 0), # 4 - Желтый
+                               5:(220, 0, 220), # 5 - Фиолетовый
+                               6:(0, 220, 220), # 6 - Голубой
+                               }
+            self.dim = 3
         self.ball_radius = 20
         self.generated_balls = []
         self.screen = screen
@@ -122,13 +132,13 @@ class Board:
                 if self.board[curr_row - 1][curr_column - 1] != self.board[row - 1][column - 1]: break
                 i[2].append((curr_row, curr_column))
         for i in (diagonal_1, diagonal_2, vertical, horizontal):
-            if len(i) >= 4:
+            if (len(i) >= 4 and self.width == 9) or (len(i) >= 3 and self.width == 5):
                 for k in i:
                     self.board[k[0] - 1][k[1] - 1] = 0
                     self.fill_cell(*k, self.cell_color)
                 self.board[row - 1][column - 1] = 0
                 self.fill_cell(row, column, self.cell_color)
-                self.score += (len(i) + 1) * (2 + len(i) - 5) * 13
+                self.score += (len(i) + 1) * (2 + len(i) - self.dim) * 13
         pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 50), (800, 20)])
         a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
         screen.blit(a, (500, 20))
@@ -150,7 +160,7 @@ class Board:
             self.check_ball(i[0], i[1])
         self.generated_balls.clear()
         for _ in range(3):
-            self.generated_balls.append(random.choice([1, 2, 3, 4, 5, 6, 7]))
+            self.generated_balls.append(random.choice(list(self.color_dict)))
 
         if self.board_of_available_cells == []:
             self.end_of_game()
