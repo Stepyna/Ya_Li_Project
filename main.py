@@ -712,5 +712,5 @@ if __name__ == '__main__':
                     menu.get_click(event.pos)
             pygame.display.flip()
 
-    # завершение работы
+    # завершение  работы
     pygame.quit()
