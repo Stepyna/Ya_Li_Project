@@ -5,6 +5,68 @@ import csv
 
 from pygame.draw_py import draw_polygon
 
+pygame.init()
+path = pygame.font.match_font("nunito")
+Font = pygame.font.Font(path, 30)
+size = width, height = 800, 600
+screen = pygame.display.set_mode(size)
+pygame.display.set_caption("Color Lines")
+color = pygame.Color('white')
+
+# Создаем объект Clock
+clock = pygame.time.Clock()
+
+def move_ball_animation(board, start_row, start_col, end_row, end_col, screen, clock):
+    """Функция для анимации перемещения шарика"""
+
+    # Координаты центра начальной клетки
+    start_x = board.left + start_col * board.cell_size - board.cell_size // 2
+    start_y = board.top + start_row * board.cell_size - board.cell_size // 2
+
+    # Координаты центра конечной клетки
+    end_x = board.left + end_col * board.cell_size - board.cell_size // 2
+    end_y = board.top + end_row * board.cell_size - board.cell_size // 2
+
+    # Количество кадров для анимации
+    frames = 15
+
+    # Шаг изменения координат за каждый кадр
+    step_x = (end_x - start_x) / frames
+    step_y = (end_y - start_y) / frames
+
+    # Начальные координаты для анимации
+    current_x, current_y = start_x, start_y
+
+    # Цвет шара
+    color = board.color_dict[board.board[start_row - 1][start_col - 1]]
+
+    # Запускаем анимацию
+    for _ in range(frames):
+        # Чертим текущий кадр
+        board.fill_cell(start_row, start_col, board.cell_color)
+        board.fill_cell(end_row, end_col, board.cell_color)
+
+        # Рисуем перемещающийся шарик
+
+        pygame.draw.circle(screen, color, (int(current_x), int(current_y)), board.ball_radius, 0)
+        pygame.draw.circle(screen, (0, 0, 0),
+                           (int(current_x), int(current_y)), board.ball_radius,
+                           2)
+
+        # Обновляем экран
+        pygame.display.flip()
+
+        # Изменяем текущие координаты
+        current_x += step_x
+        current_y += step_y
+
+        # Задержка перед следующим кадром
+        clock.tick(60)
+
+    # После завершения анимации обновляем доску
+    board.board[end_row - 1][end_col - 1] = copy.copy(board.board[start_row - 1][start_col - 1])
+    board.board[start_row - 1][start_col - 1] = 0
+
 
 class Board:
 
@@ -84,7 +146,7 @@ class Board:
                                        2)
 
             count_column = 0
-    # обновляет остальные доски (доски пути и свободных клеток)
+    # обновляет остальные доски (доски пути и свободных клеток) 2
     def update_second_board(self):
         row, column = 0, 0
         self.board_of_available_cells.clear()
@@ -211,25 +273,33 @@ class Board:
         self.frame_color = frame_color
         self.ball_radius = ball_radius
 
+    # очищает клетку (инструментальная функция)
+    def fill_cell(self, count_row, count_column, color):
+        pygame.draw.polygon(screen, self.cell_color, [
+            (self.left + (count_column - 1) * self.cell_size, self.top + (count_row - 1) * self.cell_size),
+            (self.left + (count_column - 1) * self.cell_size, self.top + count_row * self.cell_size),
+            (self.left + count_column * self.cell_size, self.top + count_row * self.cell_size),
+            (self.left + count_column * self.cell_size, self.top + (count_row - 1) * self.cell_size)])
+
+        pygame.draw.rect(screen, self.frame_color,
+                         pygame.Rect(self.left + (count_column - 1) * self.cell_size + 2,
+                                     self.top + (count_row - 1) * self.cell_size + 2,
+                                     self.cell_size - 3,
+                                     self.cell_size - 3), self.frame_size)
+
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left + (count_column - 1) * self.cell_size,
+                                                        self.top + (count_row - 1) * self.cell_size,
+                                                        self.cell_size + 1,
+                                                        self.cell_size + 1), self.frame_size)
+
     # обработка клика
     def get_click(self, mouse_pos):
         if self.action_allowed:
             self.get_cell(mouse_pos)
             self.on_click()
 
-    # очищает клетку (инструментальная функция)
-    def fill_cell(self, row, column, color):
-        pygame.draw.polygon(screen, color, [
-            (self.left + (column - 1) * self.cell_size + 4,
-             self.top + (row - 1) * self.cell_size + 4),
-            (
-                self.left + (column - 1) * self.cell_size + 4,
-                self.top + row * self.cell_size - 4),
-            (self.left + column * self.cell_size - 4, self.top + row * self.cell_size - 4),
-            (self.left + column * self.cell_size - 4,
-             self.top + (row - 1) * self.cell_size + 4)])
-
     # действия с клеткой, на которую кликнули
+
     def on_click(self):
         # отрисовка выбранной клетки и закрашивание предыдущей
         self.prev_clickedFlag = self.clickedFlag
@@ -238,18 +308,17 @@ class Board:
             if [self.prev_row, self.prev_column] == [self.curr_row, self.curr_column]:
                 if self.clickedFlag:
                     self.clickedFlag = False
-
-                else: self.clickedFlag = True
-
+                else:
+                    self.clickedFlag = True
             else:
                 self.clickedFlag = True
-
             if self.clickedFlag:
                 pygame.draw.polygon(screen, self.clicked_cell_color, [
                     (self.left + (self.curr_column - 1) * self.cell_size + 4,
                      self.top + (self.curr_row - 1) * self.cell_size + 4),
                     (
-                    self.left + (self.curr_column - 1) * self.cell_size + 4, self.top + self.curr_row * self.cell_size - 4),
+                        self.left + (self.curr_column - 1) * self.cell_size + 4,
+                        self.top + self.curr_row * self.cell_size - 4),
                     (self.left + self.curr_column * self.cell_size - 4, self.top + self.curr_row * self.cell_size - 4),
                     (self.left + self.curr_column * self.cell_size - 4,
                      self.top + (self.curr_row - 1) * self.cell_size + 4)])
@@ -287,6 +356,7 @@ class Board:
                         self.check_ball(self.curr_row, self.curr_column)
                         self.action_allowed = True
                         if self.board[self.curr_row - 1][self.curr_column - 1] > 0: self.gamemove(screen)
+
 
     # получение клетки по клику мышки
     def get_cell(self, mouse_pos):
