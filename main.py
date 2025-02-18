@@ -3,6 +3,8 @@ import random
 import copy
 import csv
 
+from pygame.draw_py import draw_polygon
+
 pygame.init()
 path = pygame.font.match_font("nunito")
 Font = pygame.font.Font(path, 30)
@@ -301,9 +303,7 @@ class Board:
     def on_click(self):
         # отрисовка выбранной клетки и закрашивание предыдущей
         self.prev_clickedFlag = self.clickedFlag
-        if 1 <= self.prev_column <= self.width and 1 <= self.prev_row <= self.height: self.fill_cell(self.prev_row,
-                                                                                                     self.prev_column,
-                                                                                                     self.cell_color)
+        if 1 <= self.prev_column <= self.width and 1 <= self.prev_row <= self.height: self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
         if 1 <= self.curr_column <= self.width and 1 <= self.curr_row <= self.height:
             if [self.prev_row, self.prev_column] == [self.curr_row, self.curr_column]:
                 if self.clickedFlag:
@@ -343,12 +343,15 @@ class Board:
                         cells = self.path_find(self.curr_row, self.curr_column)
                         prev_row, prev_column = self.prev_row, self.prev_column
                         for i in cells[::-1]:
-                            # Вызов функции анимации перемещения
-                            move_ball_animation(self, prev_row, prev_column, i[0], i[1], screen, clock)
-
-                            # Обновить данные после анимации
-                            prev_row, prev_column = i[0], i[1]
-
+                            self.board[i[0] - 1][i[1] - 1] = copy.copy(self.board[prev_row - 1][prev_column - 1])
+                            self.board[prev_row - 1][prev_column - 1] = 0
+                            self.fill_cell(prev_row, prev_column, self.cell_color)
+                            if (prev_row, prev_column) == (self.prev_row, self.prev_column):
+                                self.fill_cell(prev_row, prev_column, self.clicked_cell_color)
+                                self.fill_cell(self.curr_row, self.curr_column, (0, 255, 0))
+                            prev_row, prev_column = i[0], i[1] # добавить анимацию
+                            self.update_board(self.screen)
+                            pygame.display.flip()
                         self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
                         self.check_ball(self.curr_row, self.curr_column)
                         self.action_allowed = True
