@@ -1,6 +1,7 @@
 import pygame
 import random
 import copy
+import csv
 
 pygame.init()
 path = pygame.font.match_font("nunito")
@@ -34,18 +35,22 @@ def move_ball_animation(board, start_row, start_col, end_row, end_col, screen, c
     # Начальные координаты для анимации
     current_x, current_y = start_x, start_y
 
+    # Цвет шара
+    color = board.color_dict[board.board[start_row - 1][start_col - 1]]
+
     # Запускаем анимацию
     for _ in range(frames):
         # Чертим текущий кадр
-        screen.fill((100, 100, 100))
-        board.render(screen, Font)
+        board.fill_cell(start_row, start_col, board.cell_color)
+        board.fill_cell(end_row, end_col, board.cell_color)
 
         # Рисуем перемещающийся шарик
-        color = board.color_dict.get(board.board[start_row - 1][start_col - 1], None)
-        if color:
-            pygame.draw.circle(screen, color, (int(current_x), int(current_y)), board.ball_radius, 0)
-        else:
-            pygame.draw.circle(screen, color, (int(current_x), int(current_y)), board.ball_radius, 0)
+
+        pygame.draw.circle(screen, color, (int(current_x), int(current_y)), board.ball_radius, 0)
+        pygame.draw.circle(screen, (0, 0, 0),
+                           (int(current_x), int(current_y)), board.ball_radius,
+                           2)
+
         # Обновляем экран
         pygame.display.flip()
 
@@ -57,9 +62,8 @@ def move_ball_animation(board, start_row, start_col, end_row, end_col, screen, c
         clock.tick(60)
 
     # После завершения анимации обновляем доску
-    board.board[end_row - 1][end_col - 1] = board.board[start_row - 1][start_col - 1]
+    board.board[end_row - 1][end_col - 1] = copy.copy(board.board[start_row - 1][start_col - 1])
     board.board[start_row - 1][start_col - 1] = 0
-    board.update_board(screen)
 
 
 class Board:
@@ -77,6 +81,7 @@ class Board:
         self.board = [[-1] * width for _ in range(height)]
         self.board_of_available_cells = []
         self.path_board = [[0] * width for _ in range(height)]
+        self.left = 0
         row, column = 0, 0
         for i in self.board:
             row += 1
@@ -103,13 +108,23 @@ class Board:
                            5:(220, 0, 220), # 5 - Фиолетовый
                            6:(0, 220, 220), # 6 - Голубой
                            7:(255, 165, 0)} # 7 - Оранжевый
+        self.dim = 5
+        if self.width == 5:
+            self.color_dict = {1:(220, 0, 0), # 1 - Красный
+                               2:(0, 0, 220), # 2 - Синий
+                               3:(0, 220, 0), # 3 - Зеленый
+                               4:(250, 250, 0), # 4 - Желтый
+                               5:(220, 0, 220), # 5 - Фиолетовый
+                               6:(0, 220, 220), # 6 - Голубой
+                               }
+            self.dim = 3
         self.ball_radius = 20
         self.generated_balls = []
         self.screen = screen
         self.Font = Font
         self.score = 0
         for _ in range(3):
-            self.generated_balls.append(random.choice([1, 2, 3, 4, 5, 6, 7]))
+            self.generated_balls.append(random.choice(list(self.color_dict)))
 
     # обновляет доску и рисует новые шары
     def update_board(self, screen):
@@ -177,13 +192,13 @@ class Board:
                 if self.board[curr_row - 1][curr_column - 1] != self.board[row - 1][column - 1]: break
                 i[2].append((curr_row, curr_column))
         for i in (diagonal_1, diagonal_2, vertical, horizontal):
-            if len(i) >= 4:
+            if (len(i) >= 4 and self.width == 9) or (len(i) >= 3 and self.width == 5):
                 for k in i:
                     self.board[k[0] - 1][k[1] - 1] = 0
                     self.fill_cell(*k, self.cell_color)
                 self.board[row - 1][column - 1] = 0
                 self.fill_cell(row, column, self.cell_color)
-                self.score += (len(i) + 1) * (2 + len(i) - 5)
+                self.score += (len(i) + 1) * (2 + len(i) - self.dim) * 13
         pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 50), (800, 20)])
         a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
         screen.blit(a, (500, 20))
@@ -205,7 +220,7 @@ class Board:
             self.check_ball(i[0], i[1])
         self.generated_balls.clear()
         for _ in range(3):
-            self.generated_balls.append(random.choice([1, 2, 3, 4, 5, 6, 7]))
+            self.generated_balls.append(random.choice(list(self.color_dict)))
 
         if self.board_of_available_cells == []:
             self.end_of_game()
@@ -256,18 +271,24 @@ class Board:
         self.frame_color = frame_color
         self.ball_radius = ball_radius
 
-
     # очищает клетку (инструментальная функция)
-    def fill_cell(self, row, column, color):
-        pygame.draw.polygon(screen, color, [
-            (self.left + (column - 1) * self.cell_size + 4,
-             self.top + (row - 1) * self.cell_size + 4),
-            (
-                self.left + (column - 1) * self.cell_size + 4,
-                self.top + row * self.cell_size - 4),
-            (self.left + column * self.cell_size - 4, self.top + row * self.cell_size - 4),
-            (self.left + column * self.cell_size - 4,
-             self.top + (row - 1) * self.cell_size + 4)])
+    def fill_cell(self, count_row, count_column, color):
+        pygame.draw.polygon(screen, self.cell_color, [
+            (self.left + (count_column - 1) * self.cell_size, self.top + (count_row - 1) * self.cell_size),
+            (self.left + (count_column - 1) * self.cell_size, self.top + count_row * self.cell_size),
+            (self.left + count_column * self.cell_size, self.top + count_row * self.cell_size),
+            (self.left + count_column * self.cell_size, self.top + (count_row - 1) * self.cell_size)])
+
+        pygame.draw.rect(screen, self.frame_color,
+                         pygame.Rect(self.left + (count_column - 1) * self.cell_size + 2,
+                                     self.top + (count_row - 1) * self.cell_size + 2,
+                                     self.cell_size - 3,
+                                     self.cell_size - 3), self.frame_size)
+
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left + (count_column - 1) * self.cell_size,
+                                                        self.top + (count_row - 1) * self.cell_size,
+                                                        self.cell_size + 1,
+                                                        self.cell_size + 1), self.frame_size)
 
     # обработка клика
     def get_click(self, mouse_pos):
@@ -326,12 +347,6 @@ class Board:
                             move_ball_animation(self, prev_row, prev_column, i[0], i[1], screen, clock)
 
                             # Обновить данные после анимации
-                            self.board[i[0] - 1][i[1] - 1] = copy.copy(self.board[prev_row - 1][prev_column - 1])
-                            self.board[prev_row - 1][prev_column - 1] = 0
-                            self.fill_cell(prev_row, prev_column, self.cell_color)
-                            if (prev_row, prev_column) == (self.prev_row, self.prev_column):
-                                self.fill_cell(prev_row, prev_column, self.clicked_cell_color)
-                                self.fill_cell(self.curr_row, self.curr_column, (0, 255, 0))
                             prev_row, prev_column = i[0], i[1]
 
                         self.fill_cell(self.prev_row, self.prev_column, self.cell_color)
@@ -402,6 +417,21 @@ class Board:
 
     def end_of_game(self):
         global running
+        if running:
+            In = []
+            with open('records.csv', encoding="utf8") as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                for index, row in enumerate(reader):
+                    In.append(row)
+            csvfile.close()
+
+            with open('records.csv', 'w', newline='', encoding="utf8") as csvfile:
+                writer = csv.writer(
+                    csvfile, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                for i in In:
+                    writer.writerow(i)
+                writer.writerow(["You", self.width, self.score])
+            csvfile.close()
         running = False
 
 
@@ -410,9 +440,9 @@ class Menu:
     def __init__(self, screen, Font, flag):
         self.flag = flag
         self.action_allowed = True
-        self.middle = 25
+        self.middle = 20
         self.button_width = 150
-        self.button_height = 50
+        self.button_height = 40
         self.left = 325
         self.screen = screen
         self.font = Font
@@ -422,14 +452,31 @@ class Menu:
         self.clicked_cell_color = (200, 200, 200)
         self.curr_button_val = -1
         self.prev_button_val = -1
+        self.past_button_val = -1
+
+        In_5 = []
+        In_9 = []
+        with open('records.csv', encoding="utf8") as csvfile:
+            reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+            for index, row in enumerate(reader):
+                if index == 0:
+                    In_5.append(row)
+                    In_9.append(row)
+                elif row[1] == "5":
+                    In_5.append(row)
+                else: In_9.append(row)
+        self.In_5 = sorted(In_5, key=lambda x: x[2])
+        self.In_9 = sorted(In_9, key=lambda x: x[2])
+        csvfile.close()
+
         if flag == "Start":
             self.buttons = [[5, 9, "Back"],
-                            ["Back"],
+                            [In_5, In_9, "Back"],
                             ["Back"]]
             self.result = "COLOR LINES"
             self.first_buttons = ["New game", "Records", "Options", "Exit"]
         else:
-            self.result = f'YOU LOST!  Your score is: {board.score}'
+            self.result = f'GAME OVER!  Your score is: {board.score}'
             self.first_buttons = ["Main menu", "Exit"]
         self.Board_size = 0
 
@@ -440,8 +487,8 @@ class Menu:
 
     def get_button(self, mouse_pos):
         if self.left <= mouse_pos[0] <= 800 - self.left:
-            self.curr_button_val = ((mouse_pos[1] - 125) // (self.button_height + self.middle)) + 1
-            if 125 + self.curr_button_val * self.button_height + (self.curr_button_val - 1) * self.middle >= mouse_pos[1]:
+            self.curr_button_val = ((mouse_pos[1] - 110) // (self.button_height + self.middle)) + 1
+            if 110 + self.curr_button_val * self.button_height + (self.curr_button_val - 1) * self.middle >= mouse_pos[1]:
                 self.curr_button_val -= 1
             else:
                 self.curr_button_val = -1
@@ -453,26 +500,37 @@ class Menu:
         global running
         menu_flag, menu_flag_2, run, running = True, True, True, True
         if self.flag == "Start":
-            if self.curr_button_val == -1:
-                a = "o"
-            elif self.prev_button_val == -1:
-                self.prev_button_val = self.curr_button_val
-                if self.curr_button_val == 0: self.render_new_menu("NEW GAME", ["5 x 5", "9 x 9", "Back"])
-                elif self.curr_button_val == 1: self.render_new_menu("RECORDS", ["Back"])
-                elif self.curr_button_val == 2: self.render_new_menu("OPTIONS", ["Back"])
-                else:
-                    run, running, menu_flag, menu_flag_2 = False, False, False, False
-            elif 0 <= self.curr_button_val <= len(self.buttons[self.prev_button_val]) - 1:
-                if self.buttons[self.prev_button_val][self.curr_button_val] == "Back":
-                    self.prev_button_val = -1
+            if self.curr_button_val == -1 or self.curr_button_val > 3:
+                if self.curr_button_val == 6 and self.prev_button_val in [0, 1] and self.past_button_val == 1:
                     self.curr_button_val = -1
-                    self.render_menu(self.screen)
-                elif self.curr_button_val != -1 and self.prev_button_val != -1:
-                    if self.prev_button_val == 0:
-                        menu_flag = False
-                        self.Board_size = self.buttons[self.prev_button_val][self.curr_button_val]
-                        pass
-                    else: pass
+                    self.prev_button_val = self.past_button_val
+                    self.past_button_val = -1
+                    self.render_new_menu("RECORDS", ["5 x 5", "9 x 9", "Back"])
+            elif self.past_button_val == -1:
+                if self.prev_button_val == -1:
+                    self.prev_button_val = self.curr_button_val
+                    if self.curr_button_val == 0: self.render_new_menu("NEW GAME", ["5 x 5", "9 x 9", "Back"])
+                    elif self.curr_button_val == 1: self.render_new_menu("RECORDS", ["5 x 5", "9 x 9", "Back"])
+                    elif self.curr_button_val == 2: self.render_new_menu("OPTIONS", ["Back"])
+                    elif self.curr_button_val == 3:
+                        run, running, menu_flag, menu_flag_2 = False, False, False, False
+                elif self.prev_button_val == 1 and self.curr_button_val in [0, 1] and self.past_button_val == -1:
+                    self.past_button_val = self.prev_button_val
+                    self.prev_button_val = self.curr_button_val
+                    self.render_records_menu(self.buttons[1][self.curr_button_val])
+                elif 0 <= self.curr_button_val <= len(self.buttons[self.prev_button_val]) - 1:
+                    if self.buttons[self.prev_button_val][self.curr_button_val] == "Back":
+                        self.prev_button_val = -1
+                        self.curr_button_val = -1
+                        self.render_menu(self.screen)
+                    elif self.curr_button_val != -1 and self.prev_button_val != -1:
+                        if self.prev_button_val == 0:
+                            menu_flag = False
+                            self.Board_size = self.buttons[self.prev_button_val][self.curr_button_val]
+                            pass
+                        elif self.prev_button_val == 1:
+                            self.render_records_menu(self.buttons[self.prev_button_val][self.curr_button_val])
+                        else: pass
         else:
             if self.curr_button_val == -1: pass
             elif self.curr_button_val == 1:
@@ -504,7 +562,7 @@ class Menu:
                                                             self.button_width - 2,
                                                             self.button_height - 2), 1)
             a = self.font.render(i, 1, (10, 10, 10))
-            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height)))
+            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 10))
             screen.blit(a, text_rect)
 
     def render_new_menu(self, heading, list_1):
@@ -531,8 +589,66 @@ class Menu:
                                                                    self.button_width - 2,
                                                                    self.button_height - 2), 1)
             a = self.font.render(i, 1, (10, 10, 10))
-            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height)))
+            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 10))
             screen.blit(a, text_rect)
+
+    def render_records_menu(self, list_of_records):
+        screen = self.screen
+        screen.fill((100, 100, 100))
+        heading = "RECORDS: 9 x 9"
+        if list_of_records == self.In_5: heading = "RECORDS: 5 x 5"
+        a = self.font.render(heading, 1, (255, 255, 255))
+        text_rect = a.get_rect(center=(800 / 2, 50))
+        screen.blit(a, text_rect)
+        c = 1
+        ind = -1
+        self.middle = 5
+        self.button_height = 25
+        self.button_width = 300
+        self.left = 250
+        for i in list_of_records[:11]:
+            ind += 1
+            c += 1
+            pygame.draw.polygon(screen, self.button_color, [
+                (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 80),
+                (self.left, (c - 1) * self.middle + c * self.button_height + 80),
+                (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 80),
+                (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 80)])
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
+                                                            (c - 1) * self.middle + (c - 1) * self.button_height + 80,
+                                                            self.button_width + 1,
+                                                            self.button_height + 1), 1)
+            pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
+                                                                   (c - 1) * self.middle + (
+                                                                           c - 1) * self.button_height + 80 + 2,
+                                                                   self.button_width - 2,
+                                                                   self.button_height - 2), 1)
+            i = f"{ind}. | {i[2]} | {i[0]}"
+            a = self.font.render(i, 1, (10, 10, 10))
+            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 64))
+            screen.blit(a, text_rect)
+        self.middle = 20
+        self.button_width = 150
+        self.button_height = 40
+        self.left = 325
+        c = 8
+        pygame.draw.polygon(screen, self.button_color, [
+            (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 50),
+            (self.left, (c - 1) * self.middle + c * self.button_height + 50),
+            (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 50),
+            (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 50)])
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
+                                                        (c - 1) * self.middle + (c - 1) * self.button_height + 50,
+                                                        self.button_width + 1,
+                                                        self.button_height + 1), 1)
+        pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
+                                                               (c - 1) * self.middle + (
+                                                                       c - 1) * self.button_height + 50 + 2,
+                                                               self.button_width - 2,
+                                                               self.button_height - 2), 1)
+        a = self.font.render("Back", 1, (10, 10, 10))
+        text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 10))
+        screen.blit(a, text_rect)
 
 
 if __name__ == '__main__':
@@ -576,6 +692,11 @@ if __name__ == '__main__':
                     menu_flag_2 = False
                 if event.type == pygame.MOUSEBUTTONDOWN and board.action_allowed:
                     board.get_click(event.pos)
+                if event.type == pygame.KEYDOWN:
+                    if pygame.key.get_pressed()[pygame.K_ESCAPE]:
+                        running = False
+                        menu_flag_2 = False
+                        break
             pygame.display.flip()
 
         menu = Menu(screen, Font, "End")
