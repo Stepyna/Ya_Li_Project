@@ -2,6 +2,7 @@ import pygame
 import random
 import copy
 import csv
+import pygame_menu
 
 pygame.init()
 path = pygame.font.match_font("nunito")
@@ -64,6 +65,35 @@ def move_ball_animation(board, start_row, start_col, end_row, end_col, screen, c
     # После завершения анимации обновляем доску
     board.board[end_row - 1][end_col - 1] = copy.copy(board.board[start_row - 1][start_col - 1])
     board.board[start_row - 1][start_col - 1] = 0
+
+def menu_manage():
+    pass
+
+def false_flags():
+    global menu_flag
+    global running
+    global menu_flag_2
+    global esc_flag
+    global record_flag
+    global run_main_menu
+    global first_time
+    global options_flag
+    global rules_flag
+    menu_flag = False
+    running = False
+    menu_flag_2 = False
+    esc_flag = False
+    record_flag = False
+    run_main_menu = True
+    first_time = False
+    options_flag = False
+    rules_flag = False
+    with open('options.csv', encoding="utf8", mode="w") as csvfile:
+        writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+        writer.writerow(["VOLUME"])
+        writer.writerow([VOLUME])
+        csvfile.close()
+    exit()
 
 
 class Board:
@@ -169,6 +199,41 @@ class Board:
         self.new_balls()
         self.update_board(screen)
 
+    def update_upper(self):
+        pygame.draw.polygon(self.screen, (200, 200, 200), [(0, 0), (0, 54), (800, 54), (800, 0)])
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(0, 0, 800, 55), self.frame_size)
+        a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
+        screen.blit(a, (500, 20))
+        a = Font.render("Next:", 1, (255, 255, 255))
+        screen.blit(a, (250, 20))
+        for i in [3, 4, 5]:
+            pygame.draw.polygon(screen, self.cell_color, [
+                (175 + i * self.cell_size, 2),
+                (175 + i * self.cell_size, self.cell_size),
+                (175 + (i + 1) * self.cell_size, self.cell_size),
+                (175 + (i + 1) * self.cell_size, 2)])
+
+            pygame.draw.rect(screen, self.frame_color,
+                             pygame.Rect(175 + i * self.cell_size + 2,
+                                         2,
+                                         self.cell_size - 3,
+                                         self.cell_size - 3), self.frame_size)
+
+            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(175 + i * self.cell_size,
+                                                            2,
+                                                            self.cell_size + 1,
+                                                            self.cell_size + 1), self.frame_size)
+
+            for i in [4, 5, 6]:
+                pygame.draw.circle(screen, self.color_dict[self.generated_balls[i - 4]],
+                                   (175 + i * self.cell_size - self.cell_size // 2,
+                                    self.cell_size // 2 + 2), self.ball_radius, 20)
+
+                pygame.draw.circle(screen, (0, 0, 0),
+                                   (175 + i * self.cell_size - self.cell_size // 2,
+                                    self.cell_size // 2 + 2), self.ball_radius,
+                                   2)
+
     # проверяет, будет ли схлопывание шаров вокруг данного, и схлопывает, если будет, подсчитывает очки
     def check_ball(self, row, column):
         diagonal_1 = []
@@ -199,10 +264,8 @@ class Board:
                 self.board[row - 1][column - 1] = 0
                 self.fill_cell(row, column, self.cell_color)
                 self.score += (len(i) + 1) * (2 + len(i) - self.dim) * 13
-        pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 50), (800, 20)])
-        a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
-        screen.blit(a, (500, 20))
         self.update_second_board()
+        self.update_upper()
 
     # генерация шаров (есть проблема генерации одинаковых шаров из-за особенностей псевдорандома)
     def new_balls(self):
@@ -225,15 +288,7 @@ class Board:
         if self.board_of_available_cells == []:
             self.end_of_game()
             pass
-        for i in [4, 5, 6]:
-            pygame.draw.circle(screen, self.color_dict[self.generated_balls[i - 4]],
-                               (175 + i * self.cell_size - self.cell_size // 2,
-                                self.cell_size // 2), self.ball_radius, 20)
-
-            pygame.draw.circle(screen, (0, 0, 0),
-                               (175 + i * self.cell_size - self.cell_size // 2,
-                                self.cell_size // 2), self.ball_radius,
-                               2)
+        self.update_upper()
 
     # распространение волны
     def wave(self, row, column):
@@ -364,7 +419,9 @@ class Board:
 
     # отрисовка поля
     def render(self, screen, Font):
-        screen.fill((100, 100, 100))
+        im = pygame.image.load("retro_moscow_3.png")
+        rect = im.get_rect(bottomright=(800, 600))
+        screen.blit(im, rect)
         count_column = 0
         count_row = 0
         pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(
@@ -372,8 +429,6 @@ class Board:
              self.top - 1,
              self.width * self.cell_size + 3,
              self.width * self.cell_size + 3), 1)
-        a = Font.render("Next:", 1, (255, 255, 255))
-        screen.blit(a, (250, 20))
         # отрисовка клеток
         for i in range(self.height):
             count_row += 1
@@ -397,30 +452,11 @@ class Board:
                                                                        self.cell_size + 1), self.frame_size)
 
             count_column = 0
-        for i in [3, 4, 5]:
-            pygame.draw.polygon(screen, self.cell_color, [
-                (175 + i * self.cell_size, 0),
-                (175 + i * self.cell_size, self.cell_size),
-                (175 + (i + 1) * self.cell_size, self.cell_size),
-                (175 + (i + 1) * self.cell_size, 0)])
-
-            pygame.draw.rect(screen, self.frame_color,
-                             pygame.Rect(175 + i * self.cell_size + 2,
-                                         0,
-                                         self.cell_size - 3,
-                                         self.cell_size - 3), self.frame_size)
-
-            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(175 + i * self.cell_size,
-                                                            0,
-                                                            self.cell_size + 1,
-                                                            self.cell_size + 1), self.frame_size)
-        pygame.draw.polygon(self.screen, (100, 100, 100), [(500, 20), (500, 50), (800, 50), (800, 20)])
-        a = self.Font.render(f'Score: {self.score}', 1, (255, 255, 255))
-        screen.blit(a, (500, 20))
         self.update_second_board()
 
     def end_of_game(self):
         global running
+        global NAME
         if running:
             In = []
             with open('records.csv', encoding="utf8") as csvfile:
@@ -434,221 +470,106 @@ class Board:
                     csvfile, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 for i in In:
                     writer.writerow(i)
-                writer.writerow(["You", self.width, self.score])
+                writer.writerow([NAME, self.width, self.score])
             csvfile.close()
         running = False
 
 
-class Menu:
-
-    def __init__(self, screen, Font, flag):
-        self.flag = flag
-        self.action_allowed = True
-        self.middle = 20
-        self.button_width = 150
-        self.button_height = 40
-        self.left = 325
+class Menu(pygame_menu.Menu):
+    def __init__(self, heading, x_coord, y_coord, flag, screen, Font, mode):
+        super().__init__(heading, x_coord, y_coord, theme=flag)
         self.screen = screen
         self.font = Font
-        self.button_color = (245, 245, 245)
-        self.frame_color = (255, 255, 255)
-        self.frame_size = 2
-        self.clicked_cell_color = (200, 200, 200)
-        self.curr_button_val = -1
-        self.prev_button_val = -1
-        self.past_button_val = -1
+        self.mode = mode
+        self.enable()
+        if self.mode == "start":
+            In_5 = []
+            In_9 = []
+            with open('records.csv', encoding="utf8") as csvfile:
+                reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                for index, row in enumerate(reader):
+                    if index == 0:
+                        In_5.append(row)
+                        In_9.append(row)
+                    elif row[1] == "5":
+                        In_5.append(row)
+                    else:
+                        In_9.append(row)
+            self.In_5 = sorted(In_5, key=lambda x: x[2])
+            self.In_9 = sorted(In_9, key=lambda x: x[2])
+            self.difficulty = 9
+            self.value = (('9x9', 9), 0)
+            self.dict_1 = {9: self.In_9,
+                           5: self.In_5
+                           }
+            csvfile.close()
 
-        In_5 = []
-        In_9 = []
-        with open('records.csv', encoding="utf8") as csvfile:
-            reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-            for index, row in enumerate(reader):
-                if index == 0:
-                    In_5.append(row)
-                    In_9.append(row)
-                elif row[1] == "5":
-                    In_5.append(row)
-                else: In_9.append(row)
-        self.In_5 = sorted(In_5, key=lambda x: x[2])
-        self.In_9 = sorted(In_9, key=lambda x: x[2])
-        csvfile.close()
+        self.list_of_buttons = []
 
-        if flag == "Start":
-            self.buttons = [[5, 9, "Back"],
-                            [In_5, In_9, "Back"],
-                            ["Back"]]
-        self.Board_size = 0
+    def new_name(self, name):
+        global NAME
+        NAME = name
 
-    def get_click(self, mouse_pos):
-        if self.action_allowed:
-            self.get_button(mouse_pos)
-            self.on_click()
+    def set_difficulty(self, val, diff):
+        global DIFF
+        global VAL
+        DIFF, VAL = diff, val
+        self.difficulty = diff
+        self.value =  val
 
-    def get_button(self, mouse_pos):
-        if self.left <= mouse_pos[0] <= 800 - self.left:
-            self.curr_button_val = ((mouse_pos[1] - 110) // (self.button_height + self.middle)) + 1
-            if 110 + self.curr_button_val * self.button_height + (self.curr_button_val - 1) * self.middle >= mouse_pos[1]:
-                self.curr_button_val -= 1
-            else:
-                self.curr_button_val = -1
+    def start_the_game(self):
+        global DIFF
+        DIFF = self.difficulty
+        self.disable()
 
-    def on_click(self):
-        global menu_flag
+    def records(self):
+        global record_flag
+        global first_time
+        global run_main_menu
+        record_flag = True
+        run_main_menu = False
+        first_time = True
+
+    def options(self):
+        global options_flag
+        global first_time
+        global run_main_menu
+        options_flag = True
+        run_main_menu = False
+        first_time = True
+
+    def rules(self):
+        global rules_flag
+        global first_time
+        global run_main_menu
+        rules_flag = True
+        run_main_menu = False
+        first_time = True
+
+    def back(self):
+        global run_main_menu
+        global rules_flag
+        global options_flag
+        global record_flag
+        global first_time
+        first_time = True
+        options_flag = False
+        rules_flag = False
+        record_flag = False
+        run_main_menu = True
+
+
+    def resume_the_game(self):
+        self.disable()
+
+    def main_menu(self):
         global menu_flag_2
-        global run
         global running
-        global esc_flag
-        global board
-        menu_flag, menu_flag_2, run, running = True, True, True, True
-        if self.flag == "Start":
-            if self.curr_button_val == -1 or self.curr_button_val > 3:
-                if self.curr_button_val == 6 and self.prev_button_val in [0, 1] and self.past_button_val == 1:
-                    self.curr_button_val = -1
-                    self.prev_button_val = self.past_button_val
-                    self.past_button_val = -1
-                    self.render_new_menu("RECORDS", ["5 x 5", "9 x 9", "Back"])
-            elif self.past_button_val == -1:
-                if self.prev_button_val == -1:
-                    self.prev_button_val = self.curr_button_val
-                    if self.curr_button_val == 0: self.render_new_menu("NEW GAME", ["5 x 5", "9 x 9", "Back"])
-                    elif self.curr_button_val == 1: self.render_new_menu("RECORDS", ["5 x 5", "9 x 9", "Back"])
-                    elif self.curr_button_val == 2: self.render_new_menu("OPTIONS", ["Back"])
-                    elif self.curr_button_val == 3:
-                        run, running, menu_flag, menu_flag_2 = False, False, False, False
-                elif self.prev_button_val == 1 and self.curr_button_val in [0, 1] and self.past_button_val == -1:
-                    self.past_button_val = self.prev_button_val
-                    self.prev_button_val = self.curr_button_val
-                    self.render_records_menu(self.buttons[1][self.curr_button_val])
-                elif 0 <= self.curr_button_val <= len(self.buttons[self.prev_button_val]) - 1:
-                    if self.buttons[self.prev_button_val][self.curr_button_val] == "Back":
-                        self.prev_button_val = -1
-                        self.curr_button_val = -1
-                        self.render_new_menu("COLOR GAME", ["New game", "Records", "Options", "Exit"])
-                    elif self.curr_button_val != -1 and self.prev_button_val != -1:
-                        if self.prev_button_val == 0:
-                            menu_flag = False
-                            self.Board_size = self.buttons[self.prev_button_val][self.curr_button_val]
-                            pass
-                        elif self.prev_button_val == 1:
-                            self.render_records_menu(self.buttons[self.prev_button_val][self.curr_button_val])
-                        else: pass
-        elif self.flag == "End":
-            if self.curr_button_val == -1: pass
-            elif self.curr_button_val == 1:
-                run, running, menu_flag, menu_flag_2 = False, False, False, False
-                pass
-            elif self.curr_button_val == 0:
-                menu_flag_2 = False
-                pass
-        else:
-            if self.curr_button_val == -1: pass
-            elif self.curr_button_val == 2:
-                run, running, menu_flag, menu_flag_2 = False, False, False, False
-                pass
-            elif self.curr_button_val == 1:
-                running = False
-                menu_flag_2 = False
-                esc_flag = False
-            elif self.curr_button_val == 0:
-                esc_flag = False
-                board.render(screen, Font)
-                board.clickedFlag = False
-                board.update_board(screen)
-                for i in [4, 5, 6]:
-                    pygame.draw.circle(screen, board.color_dict[board.generated_balls[i - 4]],
-                                       (175 + i * board.cell_size - board.cell_size // 2,
-                                        board.cell_size // 2), board.ball_radius, 20)
+        menu_flag_2, running = False, False
 
-                    pygame.draw.circle(screen, (0, 0, 0),
-                                       (175 + i * board.cell_size - board.cell_size // 2,
-                                        board.cell_size // 2), board.ball_radius,
-                                       2)
-                pass
-
-    def render_new_menu(self, heading, list_1):
-        screen = self.screen
-        screen.fill((100, 100, 100))
-        a = self.font.render(heading, 1, (255, 255, 255))
-        text_rect = a.get_rect(center=(800 / 2, 50))
-        screen.blit(a, text_rect)
-        c = 1
-        for i in list_1:
-            c += 1
-            pygame.draw.polygon(screen, self.button_color, [
-                (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 50),
-                (self.left, (c - 1) * self.middle + c * self.button_height + 50),
-                (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 50),
-                (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 50)])
-            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
-                                                            (c - 1) * self.middle + (c - 1) * self.button_height + 50,
-                                                            self.button_width + 1,
-                                                            self.button_height + 1), 1)
-            pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
-                                                                   (c - 1) * self.middle + (
-                                                                               c - 1) * self.button_height + 50 + 2,
-                                                                   self.button_width - 2,
-                                                                   self.button_height - 2), 1)
-            a = self.font.render(i, 1, (10, 10, 10))
-            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 10))
-            screen.blit(a, text_rect)
-
-    def render_records_menu(self, list_of_records):
-        screen = self.screen
-        screen.fill((100, 100, 100))
-        heading = "RECORDS: 9 x 9"
-        if list_of_records == self.In_5: heading = "RECORDS: 5 x 5"
-        a = self.font.render(heading, 1, (255, 255, 255))
-        text_rect = a.get_rect(center=(800 / 2, 50))
-        screen.blit(a, text_rect)
-        c = 1
-        ind = -1
-        self.middle = 5
-        self.button_height = 25
-        self.button_width = 300
-        self.left = 250
-        for i in list_of_records[:11]:
-            ind += 1
-            c += 1
-            pygame.draw.polygon(screen, self.button_color, [
-                (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 80),
-                (self.left, (c - 1) * self.middle + c * self.button_height + 80),
-                (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 80),
-                (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 80)])
-            pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
-                                                            (c - 1) * self.middle + (c - 1) * self.button_height + 80,
-                                                            self.button_width + 1,
-                                                            self.button_height + 1), 1)
-            pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
-                                                                   (c - 1) * self.middle + (
-                                                                           c - 1) * self.button_height + 80 + 2,
-                                                                   self.button_width - 2,
-                                                                   self.button_height - 2), 1)
-            i = f"{ind}. | {i[2]} | {i[0]}"
-            a = self.font.render(i, 1, (10, 10, 10))
-            text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 64))
-            screen.blit(a, text_rect)
-        self.middle = 20
-        self.button_width = 150
-        self.button_height = 40
-        self.left = 325
-        c = 8
-        pygame.draw.polygon(screen, self.button_color, [
-            (self.left, (c - 1) * self.middle + (c - 1) * self.button_height + 50),
-            (self.left, (c - 1) * self.middle + c * self.button_height + 50),
-            (self.left + self.button_width, (c - 1) * self.middle + c * self.button_height + 50),
-            (self.left + self.button_width, (c - 1) * self.middle + (c - 1) * self.button_height + 50)])
-        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(self.left,
-                                                        (c - 1) * self.middle + (c - 1) * self.button_height + 50,
-                                                        self.button_width + 1,
-                                                        self.button_height + 1), 1)
-        pygame.draw.rect(screen, self.frame_color, pygame.Rect(self.left + 2,
-                                                               (c - 1) * self.middle + (
-                                                                       c - 1) * self.button_height + 50 + 2,
-                                                               self.button_width - 2,
-                                                               self.button_height - 2), 1)
-        a = self.font.render("Back", 1, (10, 10, 10))
-        text_rect = a.get_rect(center=(800 / 2, c * (self.middle + self.button_height) + 10))
-        screen.blit(a, text_rect)
+    def volume(self, val):
+        global VOLUME
+        VOLUME = val
 
 
 if __name__ == '__main__':
@@ -660,41 +581,124 @@ if __name__ == '__main__':
     Font = pygame.font.Font(path, 30)
     size = width, height = 800, 600
     screen = pygame.display.set_mode(size)
-    # основной цикл
     run = True
+    DIFF = 9
+    NAME = "You"
+    myimage = pygame_menu.baseimage.BaseImage(
+        image_path="retro_moscow_3.png",
+        drawing_mode=pygame_menu.baseimage.IMAGE_MODE_REPEAT_XY)
+    mytheme = pygame_menu.themes.Theme(background_color=myimage,  # transparent background
+                    title_background_color=(200, 200, 200),
+                    widget_font=pygame_menu.font.FONT_NEVIS,
+                    widget_font_background_color=(200, 200, 200),
+                    title_font_color=(60, 60, 60),
+                    widget_font_color=(60, 60, 60))
+    with open('options.csv', encoding="utf8", mode="r") as csvfile:
+        reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+        for i in reader:
+            VOLUME = i[0]
+            print(VOLUME)
+
+    VOLUME = float(VOLUME)
+
+    # основной цикл
     while run:
-        screen.fill((100, 100, 100))
-        menu = Menu(screen, Font, "Start")
-        menu.render_new_menu("COLOR GAME", ["New game", "Records", "Options", "Exit"])
+        menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, "start")
+        menu.add.text_input('Name :', default='You', onchange=menu.new_name)
+        DIFF = menu.difficulty
+        VAL = menu.value
+        menu.add.selector('Difficulty :', [('9x9', 9), ('5x5', 5)], onchange=menu.set_difficulty)
+        menu.add.button('Play', menu.start_the_game)
+        menu.add.button('Records', menu.records)
+        menu.add.button('Options', menu.options)
+        menu.add.button('Rules', menu.rules)
+        menu.add.button('Quit', false_flags)
         menu_flag = True
         running = True
         menu_flag_2 = True
         esc_flag = False
+        record_flag = False
+        run_main_menu = True
+        first_time = True
+        options_flag = False
+        rules_flag = False
+        # Цикл начального меню
         while menu_flag:
-            for event in pygame.event.get():
+            menu_manage()
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
-                    running = False
-                    run = False
-                    menu_flag = False
-                    menu_flag_2 = False
-                if event.type == pygame.MOUSEBUTTONDOWN and menu.action_allowed:
-                    menu.get_click(event.pos)
-            pygame.display.flip()
+                    false_flags()
+            if menu.is_enabled():
+                menu.draw(screen)
+                menu.update(events)
 
-        board = Board(menu.Board_size, menu.Board_size, screen, Font)
+            else: break
+
+            if run_main_menu:
+                if not (record_flag or options_flag or rules_flag) and first_time:
+                    first_time = False
+                    menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, "start")
+                    menu.add.text_input('Name :', default=NAME, onchange=menu.new_name, maxchar=15)
+                    menu.add.selector('Difficulty :', [('9x9', 9), ('5x5', 5)], default=[9, 5].index(DIFF), onchange=menu.set_difficulty)
+                    menu.add.button('Play', menu.start_the_game)
+                    menu.add.button('Records', menu.records)
+                    menu.add.button('Options', menu.options)
+                    menu.add.button('Rules', menu.rules)
+                    menu.add.button('Quit', false_flags)
+
+            if record_flag:
+                if not run_main_menu and first_time:
+                    first_time = False
+                    menu = Menu(f'RECORDS {VAL[0][0]}', 800, 600, mytheme, screen, Font, "start")
+                    c, ind = 1, -1
+                    for i in menu.dict_1[DIFF][:11]:
+                        ind += 1
+                        c += 1
+                        i = f"{ind}. | {i[2]} | {i[0]}"
+                        menu.add.label(i)
+                    menu.add.button("Back", menu.back)
+
+            if rules_flag:
+                if not run_main_menu and first_time:
+                    first_time = False
+                    menu = Menu('RULES', 800, 600, mytheme, screen, Font, "start")
+                    menu.add.button("Back", menu.back)
+
+            if options_flag:
+                if not run_main_menu and first_time:
+                    first_time = False
+                    menu = Menu("OPTIONS", 800, 600, mytheme, screen, Font, "start")
+                    menu.add.range_slider("Volume:", VOLUME, [0, 100], 1, menu.volume)
+                    menu.add.button("Back", menu.back)
+
+            pygame.display.update()
+
+        board = Board(DIFF, DIFF, screen, Font)
         board.render(screen, Font)
         board.gamemove(screen)
+        # Цикл поля и меню паузы
         while running:
             for event in pygame.event.get():
-                if esc_flag:
-                    if event.type == pygame.QUIT:
-                        running = False
-                        run = False
-                        menu_flag = False
-                        menu_flag_2 = False
-                    if event.type == pygame.MOUSEBUTTONDOWN and menu.action_allowed:
-                        menu.get_click(event.pos)
+                while esc_flag:
+                    menu_manage()
+                    events = pygame.event.get()
+                    for ev in events:
+                        if ev.type == pygame.QUIT:
+                            false_flags()
+                    if menu.is_enabled():
+                        menu.draw(screen)
+                        menu.update(events)
+                    else:
+                        esc_flag = False
+                        board.render(screen, Font)
+                        board.clickedFlag = False
+                        board.update_board(screen)
+                        board.update_upper()
+                    if not running: break
+                    pygame.display.update()
                 else:
+                    pygame.display.flip()
                     if event.type == pygame.QUIT:
                         running = False
                         run = False
@@ -705,26 +709,36 @@ if __name__ == '__main__':
                         board.get_click(event.pos)
                     if event.type == pygame.KEYDOWN:
                         if pygame.key.get_pressed()[pygame.K_ESCAPE]:
-                            # running = False
-                            # menu_flag_2 = False
-                            # break
                             esc_flag = True
-                            menu = Menu(screen, Font, "Pause")
-                            menu.render_new_menu("PAUSE", ["Resume", "Main menu", "Exit"])
-            pygame.display.flip()
+                            menu = Menu('PAUSE', 800, 600, mytheme, screen, Font, "esc")
+                            menu.add.button('Resume', menu.resume_the_game)
+                            menu.add.button('Main menu', menu.main_menu)
+                            menu.add.button('Quit', false_flags)
+                    pygame.display.flip()
 
-        menu = Menu(screen, Font, "End")
-        menu.render_new_menu(f'GAME OVER!  Your score is: {board.score}', ["Main menu", "Exit"])
+        menu = Menu('GAME OVER', 800, 600, mytheme, screen, Font, "end")
+        menu.add.label(f'"{NAME}" scored: {board.score}')
+        menu.add.button('Main menu', menu.main_menu)
+        menu.add.button('Quit', false_flags)
+        menu.disable()
+        # Цикл финального меню
         while menu_flag_2:
-            for event in pygame.event.get():
+            menu_manage()
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
-                    running = False
-                    run = False
-                    menu_flag = False
-                    menu_flag_2 = False
-                if event.type == pygame.MOUSEBUTTONDOWN and menu.action_allowed:
-                    menu.get_click(event.pos)
-            pygame.display.flip()
+                    false_flags()
+            if menu.is_enabled():
+                menu.draw(screen)
+                menu.update(events)
+            else:
+                menu.enable()
+            pygame.display.update()
 
     # завершение работы
+    with open('options.csv', encoding="utf8", mode="w") as csvfile:
+        writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+        writer.writerow(["VOLUME"])
+        writer.writerow([VOLUME])
+        csvfile.close()
     pygame.quit()
