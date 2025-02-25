@@ -419,7 +419,7 @@ class Board:
 
     # отрисовка поля
     def render(self, screen, Font):
-        im = pygame.image.load("retro_moscow_3.png")
+        im = pygame.image.load("data/retro_moscow_3.png")
         rect = im.get_rect(bottomright=(800, 600))
         screen.blit(im, rect)
         count_column = 0
@@ -476,12 +476,42 @@ class Board:
 
 
 class Menu(pygame_menu.Menu):
-    def __init__(self, heading, x_coord, y_coord, flag, screen, Font, mode):
+    def __init__(self, heading, x_coord, y_coord, flag, screen, Font, page, mode):
         super().__init__(heading, x_coord, y_coord, theme=flag)
         self.screen = screen
         self.font = Font
         self.mode = mode
         self.enable()
+        self.num_page = page
+        self.dict_of_text = ["""COLOR LINES
+
+The essence of the game is to get 
+as many points as possible.""",
+                             """Points are obtained for collecting as many balls
+as possible in one row, column or diagonal by
+moving them one at a time. The ball will move 
+if it has the opportunity to pass to the selected 
+cell from the one in which he is now with non-diagonal
+path. For collecting more balls in one line 
+at a time, the player is given 
+significantly more points than for less.""",
+                             """When collecting balls, they collapse, immediately 
+adding points to the counter and 
+disappearing from the field. 
+The course of the game 
+begins with the appearance of 
+new balls in random cells of the field. 
+Colors of the following balls the 
+player knows the move in advance.""",
+
+"""Controls
+
+Left mouse button to select ball or cell or 
+to use button;
+Esc to pause the game;
+Left and right arrows to select pages or change 
+difficulties in menus when change buttons are selected"""]
+        self.LABEL_TEXT = self.dict_of_text[self.num_page - 1]
         if self.mode == "start":
             In_5 = []
             In_9 = []
@@ -542,9 +572,11 @@ class Menu(pygame_menu.Menu):
         global rules_flag
         global first_time
         global run_main_menu
+        global flag_change
         rules_flag = True
         run_main_menu = False
         first_time = True
+        flag_change = True
 
     def back(self):
         global run_main_menu
@@ -558,6 +590,23 @@ class Menu(pygame_menu.Menu):
         record_flag = False
         run_main_menu = True
 
+    def minus_page(self, a, b):
+        global flag_change
+        global first_time
+        self.num_page = b
+        if self.num_page == 5: self.num_page = 4
+        self.LABEL_TEXT = self.dict_of_text[self.num_page - 1]
+        flag_change = True
+        first_time = True
+
+    def plus_page(self, a, b):
+        global flag_change
+        global first_time
+        self.num_page = b
+        if self.num_page == 5: self.num_page = 1
+        self.LABEL_TEXT = self.dict_of_text[self.num_page - 1]
+        flag_change = True
+        first_time = True
 
     def resume_the_game(self):
         self.disable()
@@ -565,7 +614,9 @@ class Menu(pygame_menu.Menu):
     def main_menu(self):
         global menu_flag_2
         global running
+        global first_time
         menu_flag_2, running = False, False
+        first_time = True
 
     def volume(self, val):
         global VOLUME
@@ -585,7 +636,7 @@ if __name__ == '__main__':
     DIFF = 9
     NAME = "You"
     myimage = pygame_menu.baseimage.BaseImage(
-        image_path="retro_moscow_3.png",
+        image_path="data/retro_moscow_3.png",
         drawing_mode=pygame_menu.baseimage.IMAGE_MODE_REPEAT_XY)
     mytheme = pygame_menu.themes.Theme(background_color=myimage,  # transparent background
                     title_background_color=(200, 200, 200),
@@ -597,13 +648,12 @@ if __name__ == '__main__':
         reader = csv.reader(csvfile, delimiter=';', quotechar='"')
         for i in reader:
             VOLUME = i[0]
-            print(VOLUME)
 
     VOLUME = float(VOLUME)
 
     # основной цикл
     while run:
-        menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, "start")
+        menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, 1, "start")
         menu.add.text_input('Name :', default='You', onchange=menu.new_name)
         DIFF = menu.difficulty
         VAL = menu.value
@@ -622,6 +672,7 @@ if __name__ == '__main__':
         first_time = True
         options_flag = False
         rules_flag = False
+        flag_change = True
         # Цикл начального меню
         while menu_flag:
             menu_manage()
@@ -638,7 +689,7 @@ if __name__ == '__main__':
             if run_main_menu:
                 if not (record_flag or options_flag or rules_flag) and first_time:
                     first_time = False
-                    menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, "start")
+                    menu = Menu('COLOR LINES', 800, 600, mytheme, screen, Font, 1, "start")
                     menu.add.text_input('Name :', default=NAME, onchange=menu.new_name, maxchar=15)
                     menu.add.selector('Difficulty :', [('9x9', 9), ('5x5', 5)], default=[9, 5].index(DIFF), onchange=menu.set_difficulty)
                     menu.add.button('Play', menu.start_the_game)
@@ -650,7 +701,7 @@ if __name__ == '__main__':
             if record_flag:
                 if not run_main_menu and first_time:
                     first_time = False
-                    menu = Menu(f'RECORDS {VAL[0][0]}', 800, 600, mytheme, screen, Font, "start")
+                    menu = Menu(f'RECORDS {VAL[0][0]}', 800, 600, mytheme, screen, Font, 1, "start")
                     c, ind = 1, -1
                     for i in menu.dict_1[DIFF][:11]:
                         ind += 1
@@ -661,14 +712,18 @@ if __name__ == '__main__':
 
             if rules_flag:
                 if not run_main_menu and first_time:
-                    first_time = False
-                    menu = Menu('RULES', 800, 600, mytheme, screen, Font, "start")
-                    menu.add.button("Back", menu.back)
+                    if flag_change:
+                        menu = Menu('RULES', 800, 600, mytheme, screen, Font, menu.num_page, "start")
+                        menu.add.selector('PAGE :', [('1', 1), ('2', 2), ("3", 3), ("4", 4)], default=menu.num_page - 1, onchange=menu.plus_page, onreturn=menu.minus_page)
+                        menu.add.label(menu.LABEL_TEXT)
+                        menu.add.button("Back", menu.back)
+                        flag_change = False
+                        first_time = False
 
             if options_flag:
                 if not run_main_menu and first_time:
                     first_time = False
-                    menu = Menu("OPTIONS", 800, 600, mytheme, screen, Font, "start")
+                    menu = Menu("OPTIONS", 800, 600, mytheme, screen, Font, 1, "start")
                     menu.add.range_slider("Volume:", VOLUME, [0, 100], 1, menu.volume)
                     menu.add.button("Back", menu.back)
 
@@ -710,13 +765,13 @@ if __name__ == '__main__':
                     if event.type == pygame.KEYDOWN:
                         if pygame.key.get_pressed()[pygame.K_ESCAPE]:
                             esc_flag = True
-                            menu = Menu('PAUSE', 800, 600, mytheme, screen, Font, "esc")
+                            menu = Menu('PAUSE', 800, 600, mytheme, screen, Font, 1,"esc")
                             menu.add.button('Resume', menu.resume_the_game)
                             menu.add.button('Main menu', menu.main_menu)
                             menu.add.button('Quit', false_flags)
                     pygame.display.flip()
 
-        menu = Menu('GAME OVER', 800, 600, mytheme, screen, Font, "end")
+        menu = Menu('GAME OVER', 800, 600, mytheme, screen, Font, 1,"end")
         menu.add.label(f'"{NAME}" scored: {board.score}')
         menu.add.button('Main menu', menu.main_menu)
         menu.add.button('Quit', false_flags)
