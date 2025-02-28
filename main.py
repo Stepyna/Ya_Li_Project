@@ -5,6 +5,9 @@ import csv
 import pygame_menu
 
 pygame.init()
+pygame.mixer.init()
+# sound_back = pygame.mixer.Sound('music_fore_back.mp3')
+boom_sound = pygame.mixer.Sound('data/BOOM.mp3')
 path = pygame.font.match_font("nunito")
 Font = pygame.font.Font(path, 30)
 size = width, height = 800, 600
@@ -258,6 +261,7 @@ class Board:
                 i[2].append((curr_row, curr_column))
         for i in (diagonal_1, diagonal_2, vertical, horizontal):
             if (len(i) >= 4 and self.width == 9) or (len(i) >= 3 and self.width == 5):
+                boom_sound.play()
                 for k in i:
                     self.board[k[0] - 1][k[1] - 1] = 0
                     self.fill_cell(*k, self.cell_color)
